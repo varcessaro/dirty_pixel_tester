@@ -9,6 +9,7 @@ struct args_t {
     FILE * i;
     FILE * o;
     KmzArgbColor * colors;
+    size_t mode;
 };
 typedef struct args_t Args;
 
@@ -43,6 +44,14 @@ int parse_args(const int argc, const char * argv[], Args * args) {
         } else if (strcmp(arg_type, "--too-dark") == 0) {
             too_dark = KmzArgbColor__from_hex(arg_value);
             has_too_dark = has_color(too_dark);
+        } else if (strcmp(arg_type, "-m") == 0) {
+            if (strcmp(arg_value, "checker") == 0) {
+                args->mode = 0;
+            } else if (strcmp(arg_value, "cleaner") == 0) {
+                args->mode = 1;
+            } else {
+                return -129;
+            }
         } else {
             return -127;
         }
@@ -66,7 +75,7 @@ int parse_args(const int argc, const char * argv[], Args * args) {
 }
 
 int main(int argc, const char * argv[]) {
-    Args args = {};
+    Args args = {.mode=0};
     int result = parse_args(argc - 1, argv + 1, &args);
     
     if (0 != result) {
@@ -88,7 +97,15 @@ int main(int argc, const char * argv[]) {
     }
     
     KmzImage * w = KmzImage__new_from_gd_2x(img);
-    dpc_perform_contrast(w, colors_c, colors);
+    
+    switch (args.mode) {
+        case 0:
+            dpc_perform_contrast(w, colors_c, colors);
+            break;
+        case 1:
+            dpc_perform_clean(w);
+            break;
+    }
     memcpy(img->pixels, w->pixels, w->len * sizeof(kmz_color_32));
     
     status = kmz_write_gd_2x_image_file(o, img);
